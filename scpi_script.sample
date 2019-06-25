@@ -1,0 +1,6 @@
+TCPIP::192.168.1.87::INSTR
+G1:StartLoop:Max=3
+*ESR?
+*IDN?
+G1:Sleep=2
+G1:EndLoop
