@@ -222,7 +222,7 @@ class Instrument(vxi11.Instrument):
         for channel in self.channels:
             chdata = {}
             xyvals = list(self._fetch_trace(channel.name))
-            chdata['time_step'] = xyvals[0][0] - xyvals[1][0]
+            chdata['time_step'] = xyvals[1][0] - xyvals[0][0]
             chdata['y_values'] = [round_sig(val[1]) for val in xyvals]
             chdata['name'] = channel.name
             trace_data['channels'].append(chdata)
