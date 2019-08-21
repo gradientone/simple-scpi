@@ -1,65 +1,23 @@
-import functools
 import errno
 import os
 import socket
-import time
-import vxi11
-import scpi_logger
-from threading import Thread
-from settings import COMMAND_TIMEOUT, SCRIPT_TIMEOUT
+import sys
+
+from instruments.base import Instrument
+from instruments.instrument_utils import InstrumentConnectionError
+from settings import SCRIPT_TIMEOUT
+from settings import BASE_URL, SCPIDIR
+from instruments import instrument_drivers
+from requesters import Requester
+from scpi_logger import logger
+from script_tools import timeout, TimeoutError, Sleep, G1Loop
+from scpi_commands import SCPICommand, FetchWaveformCommand
+from scpi_commands import FetchScreenshotCommand
+from scpi_commands import PostWaveformCommand, PostScreenshotCommand
 
 
-HOME = os.path.expanduser("~")
-SCPIDIR = os.path.join(HOME, 'scpi')
-if not os.path.exists(SCPIDIR):
-    os.makedirs(SCPIDIR)
-
-SCPI_FILENAME = 'scpi_script'
+SCPI_FILENAME = 'scpi_script.txt'
 SCPI_FILEPATH = os.path.join(SCPIDIR, SCPI_FILENAME)
-
-
-logger = scpi_logger.get_logger()
-
-
-class TimeoutError(Exception):
-    def __init__(self, *args):
-        super(TimeoutError, self).__init__('Timeout',*args)
-
-
-def timeout(timeout):
-    def deco(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            origResult = TimeoutError(
-                         'function [{}] timeout [{} seconds] exceeded!'
-                         .format(func.__name__, timeout))
-            res = [origResult]
-            def newFunc():
-                try:
-                    result = func(*args, **kwargs)
-                except Exception, e:
-                    result = e
-                res[0] = result
-            t = Thread(target=newFunc)
-            t.daemon = True
-            try:
-                t.start()
-                t.join(timeout)
-            except Exception as e:
-                logger.error('error starting thread')
-                raise e
-            result = res[0]  # get result from thread
-            if isinstance(result, TimeoutError):
-                logger.error('function [{}] timeout [{} seconds] exceeded!'
-                             .format(func.__name__, timeout))
-                raise result
-            elif isinstance(result, BaseException):
-                logger.error("Unexpected exception in {}"
-                             .format(func.__name__))
-                raise result
-            return result
-        return wrapper
-    return deco
 
 
 class G1Script(object):
@@ -77,7 +35,8 @@ class G1Script(object):
     responses = []
 
     def __init__(self, commands):
-        logger.info("building G1Script with commands: {}".format(commands))
+        script = [str(command) for command in commands]
+        logger.info("building G1Script: {}".format(script))
         self.commands = commands
 
     @timeout(SCRIPT_TIMEOUT)
@@ -86,116 +45,15 @@ class G1Script(object):
             try:
                 response = command.run()
             except TimeoutError:
-                logger.warning("Command {} timed out!".format(command))
+                logger.warning("Command '{}' timed out!".format(command))
             except Exception as e:
-                logger.warning("Command {} encountered an unexpected "
-                               "exception: {}".format(command, e))
+                logger.warning("Command '{}' encountered an unexpected "
+                               "exception: {};".format(command, e))
             else:
                 if isinstance(response, list):
                     self.responses.extend(response)
                 else:
                     self.responses.append(response)
-
-
-class ScriptLogic(object):
-    """Handles loops and conditionals for a SCPI script"""
-    def __init__(self, name='', *args, **kwargs):
-        self.name = name
-
-    def __str__(self):
-        if self.name:
-            return self.name
-        else:
-            return 'ScriptLogicObject'
-
-
-class Sleep(ScriptLogic):
-    """When running the script this will time.sleep()"""
-    def __init__(self, seconds=0, *args, **kwargs):
-        super(Sleep, self).__init__(*args, **kwargs)
-        self.seconds = seconds
-
-    @timeout(COMMAND_TIMEOUT)
-    def run(self):
-        time.sleep(self.seconds)
-
-
-class G1Loop(ScriptLogic):
-    """GraidienOne class for handling commands in a loop"""
-    def __init__(self, commands=[], maxcount=1, break_on=None,
-                 *args, **kwargs):
-        super(G1Loop, self).__init__(*args, **kwargs)
-        self.responses = []
-
-        # list of commands to run each iteration
-        self.commands = commands
-
-        # maximum number of times to loop
-        self.maxcount = maxcount
-
-        # response to break loop
-        self.break_on = break_on
-
-    def run(self):
-        for i in range(self.maxcount):
-            for command in self.commands:
-                try:
-                    response = command.run()
-                except TimeoutError:
-                    response = "Command {} timed out!".format(command)
-                    logger.warning(response)
-                except Exception as e:
-                    response = ("Command {} encountered an unexpected "
-                                "exception: {}".format(command, e))
-                    logger.warning(response)
-                self.responses.append(response)
-                if self.break_on is not None and response == self.break_on:
-                    # Note: will break from the outer range() loop also
-                    logger.info("Received response {}; Breaking from loop"
-                                .format(response))
-                    return
-
-    def __str__(self):
-        if self.name:
-            return self.name
-        else:
-            return 'G1LoopObject'
-
-
-class Comparison(ScriptLogic):
-    comparson_value = ''
-
-
-class SCPICommand():
-    command = ''  # command string e.g. '*ESR?'
-    method = 'write'  # vxi11 method used on instrument (write or ask)
-    response = ''  # response from instrument
-
-    def __init__(self, command, instrument, *args, **kwargs):
-        self.instrument = instrument
-        self.command = command
-        if command[-1] == '?':
-            self.method = 'ask'
-        else:
-            self.method = 'write'
-
-    def __str__(self):
-        return self.command
-
-    @timeout(COMMAND_TIMEOUT)
-    def run(self):
-        if self.method == 'ask':
-            self.response = self.instrument.ask_raw(self.command).rstrip('\r\n')
-        else:
-            self.response = self.instrument.write(self.command)
-        logger.info("SCPICommand: {}; Response: {}"
-                    .format(self.command, self.response))
-        return self.response
-
-
-class Instrument(vxi11.Instrument):
-    vxi11_addr = ''
-    scpi_commands = []
 
 
 class SCPIClient():
@@ -262,13 +120,34 @@ class SCPIClient():
         """
         with open(filepath, 'r') as scpifile:
             for row in scpifile:
-                cmdstr = row.rstrip()
+                cmdstr = self._sanitize_command_string(row)
                 if cmdstr:
                     try:
                         self._parse_command_string(cmdstr)
                     except socket.error as e:
                         self._handle_socket_err(e)
         return G1Script(commands=self.commands)
+
+    def _sanitize_command_string(self, row):
+        val = row.rstrip()
+        if val.startswith('#'):
+            # the row is just a comment, ignore it
+            return ''
+        else:
+            return val
+
+    def write(self, file='', mode='r', content=''):
+        try:
+            with open(file, mode) as f:
+                f.write(content)
+        except IOError as e:
+            # not able to read the file
+            logger.warning("IOError write(): {}".format(e))
+        except TypeError as e:
+            # bad data in the file
+            logger.warning("TypeError write(): {}".format(e))
+        except Exception as e:
+            logger.error("Unexpected error in write(): {}".format(e))
 
     def _parse_command_string(self, cmdstr):
         """Parses the commands string and adds it to the G1Script
@@ -282,10 +161,14 @@ class SCPIClient():
             None
         """
         cmdcaps = cmdstr.upper()
-        if cmdcaps.startswith('TCPIP'):
-            self.instrument = self._init_instrument(cmdstr)
-        elif not self.instrument:
-            logger.warning("No instrument to run command: {}".format(cmdstr))
+        if cmdcaps.startswith('G1:OPEN') or cmdcaps.startswith('TCPIP'):
+            try:
+                self.instrument = self._open_instrument(cmdstr)
+            except InstrumentConnectionError:
+                logger.warning("Encountered InstrumentConnectionError when "
+                               "attempting to open with '{}'".format(cmdstr))
+                logger.warning("Exiting...")
+                sys.exit()
         elif cmdcaps.startswith('G1:STARTLOOP') or cmdcaps == 'G1:ENDLOOP':
             self._parse_loop_cmd(cmdstr)
         else:
@@ -301,10 +184,21 @@ class SCPIClient():
         Otherwise the command will just be appended to the regular
         list of commands.
         """
-        if cmdstr.upper().startswith('G1:SLEEP'):
-            command = Sleep(seconds=float(cmdstr.split('=')[-1]))
+        g1_commands = {
+            'G1:SLEEP': Sleep,
+            'G1:FETCHWAVEFORM': FetchWaveformCommand,
+            'G1:FETCHSCREENSHOT': FetchScreenshotCommand,
+            'G1:POSTWAVEFORM': PostWaveformCommand,
+            'G1:POSTSCREENSHOT': PostScreenshotCommand,
+        }
+        cmdstr = cmdstr.upper()
+        # if cmdstr in g1_commands:
+        if cmdstr.startswith(tuple(g1_commands.keys())):
+            key = cmdstr.split('(')[0]
+            command = g1_commands[key](command=cmdstr,
+                                       instrument=self.instrument)
         else:
-            command = SCPICommand(cmdstr, self.instrument)
+            command = SCPICommand(command=cmdstr, instrument=self.instrument)
         if self.loops:
             self.loops[-1].commands.append(command)
         else:
@@ -339,24 +233,62 @@ class SCPIClient():
                 break_on = item.split('=')[-1]
         return G1Loop(maxcount=maxcount, break_on=break_on)
 
-    def _init_instrument(self, addr, retry=True):
-        """Initializes the vxi11 Instrument"""
+    def _open_instrument(self, cmdstr, retry=True):
+        """Opens connection with the Instrument"""
+        addr = cmdstr.upper().split('G1:OPEN:')[-1]
         logger.info("Initializing instrument at: {}".format(addr))
         try:
-            self.instrument = Instrument(addr)
+            raw_instr = Instrument(addr)
         except socket.error as serr:
             if serr.errno != errno.ECONNREFUSED:
                 raise serr
             # handle connection refused
             if retry:
-                self._init_instrument(addr, retry=False)
+                return self._open_instrument(addr, retry=False)
             else:
                 raise serr
 
-        return self.instrument
+        ianalyzer = instrument_drivers.InstrumentAnalyzer()
+        self.instrument = ianalyzer.open_instrument(raw_instr)
+        if not self.instrument:
+            raise InstrumentConnectionError
+        else:
+            return self.instrument
 
     def _handle_socket_err(self, err):
         logger.warning("Socket Error: {}".format(err))
+
+
+class Result(object):
+
+    def __init__(self, *args, **kwargs):
+        self.category = ''  # fetch_screenshot, results_table, etc.
+        self.file_key = ''
+        self.command_id = ''
+        self.requester = Requester()
+
+    def save_to_server(self):
+        """Saves Result to server
+
+        Summary:
+            First makes a GET request for a upload url.
+            Then makes a POST to the upload url.
+
+        Parameters:
+            None
+
+        Returns:
+            A requests module response object
+        """
+        BASE_URL + '/upload/geturl'
+        upload_url = self.requester.https_get(BASE_URL + '/upload/geturl')
+        data = {
+            'category': self.category,
+            'file_key': self.file_key,
+            'command_id': self.command_id,
+        }
+        response = self.requester.https_post(upload_url, data)
+        return response
 
 
 if __name__ == '__main__':

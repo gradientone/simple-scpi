@@ -2,19 +2,7 @@ import datetime
 import logging
 import os
 
-
-ALLOWED_FILESIZE = 2000000
-HOME = os.path.expanduser("~")
-SCPIDIR = os.path.join(HOME, 'scpi')
-if not os.path.exists(SCPIDIR):
-    try:
-        os.makedirs(SCPIDIR)
-    except OSError as e:
-        print("OSError creating log directory, e: {}".format(e))
-        raise
-    except Exception as e:
-        print("Exception creating log directory, e: {}".format(e))
-        raise
+from settings import LOGDIR, MAX_LOGFILE_SIZE
 
 
 def purge_logfile(file):
@@ -40,7 +28,7 @@ def rotate_logfiles(original_file, max_num_files=10):
         nextlogfile = original_file + "." + str(file_num)
         if not os.path.isfile(nextlogfile):
             break
-        if os.stat(nextlogfile).st_size < int(ALLOWED_FILESIZE):
+        if os.stat(nextlogfile).st_size < int(MAX_LOGFILE_SIZE):
             # purge the oldest file so that it's ready next rotate
             if file_num < int(max_num_files):
                 file_num += 1
@@ -70,7 +58,7 @@ def get_logger(file_lvl=logging.DEBUG,
 
     _logger.setLevel(logging.DEBUG)
     _logger.propagate = False
-    logger_file = os.path.join(SCPIDIR, loggername)
+    logger_file = os.path.join(LOGDIR, loggername)
 
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     initmsg = now + " :: [ INIT ] Initializing {}\n".format(loggername)
@@ -80,7 +68,7 @@ def get_logger(file_lvl=logging.DEBUG,
             f.write(initmsg)
 
     # check logfile size and rotate if needed
-    if os.stat(logger_file).st_size > int(ALLOWED_FILESIZE):
+    if os.stat(logger_file).st_size > int(MAX_LOGFILE_SIZE):
         logger_file = rotate_logfiles(logger_file)
 
     # create file handler
@@ -107,3 +95,6 @@ def get_logger(file_lvl=logging.DEBUG,
     _logger.addHandler(file_handler)
 
     return _logger
+
+
+logger = get_logger()

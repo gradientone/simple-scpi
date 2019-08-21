@@ -1,6 +1,40 @@
-TCPIP::192.168.1.87::INSTR
+# Lines starting with # are comments and won't execute
+
+# This is a sample command to open an instrument
+# You will need to update it with your own address
+G1:Open:TCPIP::192.168.1.87::INSTR
+
+# Starts a loop that runs 3 times
 G1:StartLoop:Max=3
+
+# SCPI command strings to send to the instrument
 *ESR?
 *IDN?
-G1:Sleep=2
+
+# To sleep (or pause) in between iterations of the loop
+G1:Sleep(2)
+
+# marks the end of a loop
 G1:EndLoop
+
+# Note:
+# For the following G1: commands you will need to
+# remove the # symbol in order to uncomment the
+# command and have it execute when running this script.
+
+# Also, for the Fetch commands make sure you
+# Open the instrument first. For the Post commands
+# you will first need to make sure your DOMAINNAME and
+# AUTH_TOKEN values are properly set in settings.py
+
+# To fetch a screenshot and save to file
+# G1:FetchScreenshot
+
+# To post that screenshot to GradientOne
+# G1:PostScreenshot
+
+# To fetch a waveform and save to file
+# G1:FetchWaveform
+
+# To post that waveform to GradientOne
+# G1:PostWaveform
