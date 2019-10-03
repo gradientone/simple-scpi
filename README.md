@@ -58,7 +58,7 @@ make requests to the GradientOne API will need a `GradientOneAuthConfig.txt`
 
 Follow the instructions in the next section if you need help getting one.
 
-## Using the GradienOne API
+## Using the GradientOne API
 
 To use the GradientOne API you will need an a GradientOne account. If you do not
 have an account you can [sign up for free!](https://demo.gradientone.com/welcome)
