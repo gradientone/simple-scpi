@@ -32,7 +32,7 @@ For MacOS, Linux, and Windows Powershell you can run the following from the comm
 Note that for the Windows Command Prompt the copy command is different. You will need to
 replace the last line with:
 
-    copy sample_settings.py settings.py
+    copy scpi_script.txt.py scpi_script.txt.py
 
 To run the scpi script, you will need enter your instrument's TCPIP address.
 This can be found on your instrument, usually under IO Setting -> LAN Config.

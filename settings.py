@@ -1,4 +1,13 @@
-import ConfigParser
+import sys
+if sys.version_info[0] == 3:
+    # python 3 import
+    from configparser import ConfigParser
+elif sys.version_info[0] == 2:
+    # python 2 import
+    from ConfigParser import ConfigParser
+else:
+    raise Exception("Unsupported version of Python")
+
 import errno
 import os
 import sys
@@ -115,7 +124,7 @@ def build_config_parser(filename='GradientOneAuthConfig.txt'):
             the find_file function to
 
     """
-    cfg = ConfigParser.ConfigParser(dict_type=dict)
+    cfg = ConfigParser(dict_type=dict)
     cfg.optionxform = str
     cfgfile = None
     try:
