@@ -27,12 +27,12 @@ For MacOS, Linux, and Windows Powershell you can run the following from the comm
 
     git clone https://gitlab.com/gradientone/scpi-client
     cd scpi-client
-    cp scpi_script.txt.py scpi_script.txt.py
+    cp scpi_script.sample scpi_script.txt
 
 Note that for the Windows Command Prompt the copy command is different. You will need to
 replace the last line with:
 
-    copy scpi_script.txt.py scpi_script.txt.py
+    copy scpi_script.sample scpi_script.txt
 
 To run the scpi script, you will need enter your instrument's TCPIP address.
 This can be found on your instrument, usually under IO Setting -> LAN Config.
