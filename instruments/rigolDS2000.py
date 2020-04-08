@@ -1,7 +1,7 @@
 # For Rigol DS2000 Family Instrument Command Handling
 
-from base import ValueNotSupportedException
-from rigol import RigolInstrument
+from instruments.base import ValueNotSupportedException
+from instruments.rigol import RigolInstrument
 
 
 class RigolDS2000(RigolInstrument):

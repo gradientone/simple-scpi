@@ -1,8 +1,8 @@
 # For Rigol Specific Command Handling
 
 import array
-from base import Instrument, decode_ieee_block, TraceXY
-from base import UnexpectedResponseException
+from instruments.base import Instrument, decode_ieee_block, TraceXY
+from instruments.base import UnexpectedResponseException
 
 
 class RigolInstrument(Instrument):

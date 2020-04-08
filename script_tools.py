@@ -23,7 +23,7 @@ def timeout(timeout):
             def newFunc():
                 try:
                     result = func(*args, **kwargs)
-                except Exception, e:
+                except Exception as e:
                     result = e
                 res[0] = result
             t = Thread(target=newFunc)

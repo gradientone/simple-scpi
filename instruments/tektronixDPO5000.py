@@ -1,8 +1,8 @@
 import array
 import sys
-from base import TraceXY
-from base import UnexpectedResponseException
-from tektronix import TektronixInstrument
+from instruments.base import TraceXY
+from instruments.base import UnexpectedResponseException
+from instruments.tektronix import TektronixInstrument
 
 
 class TektronixDPO5000(TektronixInstrument):
@@ -25,21 +25,21 @@ class TektronixDPO5000(TektronixInstrument):
 
         # Read preamble
         pre = self._ask(":wfmoutpre?").split(';')
-        print "pre = ", self._ask("WFMOutpre?")
-        print "byt_nr", self._ask("WFMOUTpre:BYT_NR?")
-        print "bit_nr", self._ask("WFMOUTpre:BIT_NR?")
-        print "ENCDG", self._ask("WFMOUTpre:ENCDG?")
-        print "BNFMT", self._ask("WFMOUTpre:BN_FMT?")
-        print "BYTOR", self._ask("WFMOUTpre:BYT_OR?")
-        print "NRFMT", self._ask("WFMOUTpre:NR_PT?")
-        print "PTFMT", self._ask("WFMOUTpre:PT_FMT?")
-        print "XINC", self._ask("WFMOUTpre:XINCR?")
-        print "XZERO", self._ask("WFMOUTpre:XZERO?")
-        print "PTOFF", self._ask("WFMOUTpre:PT_OFF?")
-        print "YMULT", self._ask("WFMOUTpre:YMULT?")
-        print "YOFOF", self._ask("WFMOUTpre:YOFF?")
-        print "YZERO", self._ask("WFMOUTpre:YZERO?")
-        print "NR_nr", self._ask("WFMOUTpre:NR_FR?")
+        print("pre = {}".format(self._ask("WFMOutpre?")))
+        print("byt_nr {}".format(self._ask("WFMOUTpre:BYT_NR?")))
+        print("bit_nr {}".format(self._ask("WFMOUTpre:BIT_NR?")))
+        print("ENCDG {}".format(self._ask("WFMOUTpre:ENCDG?")))
+        print("BNFMT {}".format(self._ask("WFMOUTpre:BN_FMT?")))
+        print("BYTOR {}".format(self._ask("WFMOUTpre:BYT_OR?")))
+        print("NRFMT {}".format(self._ask("WFMOUTpre:NR_PT?")))
+        print("PTFMT {}".format(self._ask("WFMOUTpre:PT_FMT?")))
+        print("XINC {}".format(self._ask("WFMOUTpre:XINCR?")))
+        print("XZERO {}".format(self._ask("WFMOUTpre:XZERO?")))
+        print("PTOFF {}".format(self._ask("WFMOUTpre:PT_OFF?")))
+        print("YMULT {}".format(self._ask("WFMOUTpre:YMULT?")))
+        print("YOFOF {}".format(self._ask("WFMOUTpre:YOFF?")))
+        print("YZERO {}".format(self._ask("WFMOUTpre:YZERO?")))
+        print("NR_nr {}".format(self._ask("WFMOUTpre:NR_FR?")))
         acq_format = pre[7].strip().upper()
         points = int(pre[6])
         point_size = int(pre[0])

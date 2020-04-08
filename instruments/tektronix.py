@@ -1,6 +1,6 @@
 # For Tektronix Specific Command Handling
 
-from base import Instrument, TraceXY
+from instruments.base import Instrument, TraceXY
 
 
 class TektronixInstrument(Instrument):

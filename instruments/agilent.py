@@ -2,8 +2,8 @@
 
 import sys
 import array
-from base import Instrument, ValueNotSupportedException
-from base import InvalidAcquisitionTypeException, UnexpectedResponseException
+from instruments.base import Instrument, ValueNotSupportedException
+from instruments.base import InvalidAcquisitionTypeException, UnexpectedResponseException
 
 
 class AgilentInstrument(Instrument):

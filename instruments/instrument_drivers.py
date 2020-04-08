@@ -2,13 +2,14 @@
 # instrument model and manufacturer parameters
 
 import collections
-from base import Instrument
-from rigol import RigolInstrument
-from agilent import AgilentInstrument
-from tektronix import TektronixInstrument
-from rigolDS2000 import RigolDS2000
-from tektronixDPO5000 import TektronixDPO5000
-from instrument_utils import InstrumentConnectionError
+from instruments import base
+from instruments.rigol import RigolInstrument
+from instruments.agilent import AgilentInstrument
+from instruments.tektronix import TektronixInstrument
+from instruments.rigolDS2000 import RigolDS2000
+from instruments.tektronixDPO5000 import TektronixDPO5000
+from instruments.instrument_utils import InstrumentConnectionError
+from scpi_logger import logger
 
 
 class InstrumentAnalyzer(object):
@@ -126,6 +127,8 @@ class InstrumentAnalyzer(object):
 
         while i_key not in instr_dict:
             i_key = i_key[0:len(i_key) - 1]
+            if i_key == '':
+                break
 
         # check for most specific the manf and model match first
         if i_key in instr_dict:
@@ -135,4 +138,17 @@ class InstrumentAnalyzer(object):
             return instr_dict[manf]
         # else by default just return an Instrument class
         else:
-            return Instrument
+            logger.info("Using default Instrument class. "
+                        "Only basic SCPI command strings are supported.")
+            return base.Instrument
+
+def test():
+    manf = 'rohde&schwarz'
+    model = 'hmc8042'
+    logger.info("Testing InstrumentAnalyzer manufacturer "
+                "and model lookup")
+    response = InstrumentAnalyzer()._manf_model_driver_lookup(manf, model)
+    print("response: {}".format(response))
+    # because rohde&schwarze is not in the InstrumentAnalyzer instr_dict,
+    # we expect the base Instrument class
+    assert response == base.Instrument
