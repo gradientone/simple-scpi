@@ -50,7 +50,7 @@ class SCPICommand():
     @timeout(COMMAND_TIMEOUT)
     def run(self):
         if self.method == 'ask':
-            self.response = self.instrument.ask_raw(self.command).rstrip('\r\n')
+            self.response = self.instrument.ask(self.command).rstrip('\r\n')
         else:
             self.response = self.instrument.write(self.command)
         logger.info("SCPICommand: {}; Response: {}"
