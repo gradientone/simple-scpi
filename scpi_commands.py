@@ -50,7 +50,13 @@ class SCPICommand():
     @timeout(COMMAND_TIMEOUT)
     def run(self):
         if self.method == 'ask':
-            self.response = self.instrument.ask(self.command).rstrip('\r\n')
+            try:
+                self.response = self.instrument.ask(self.command).rstrip('\r\n')
+            except UnicodeDecodeError as e:
+                msg = "utf8' codec can't decode"
+                logger.info("Request for binary data detected")
+                if msg in str(e):
+                    self.response = self.instrument.ask_raw(self.command).rstrip('\r\n')
         else:
             self.response = self.instrument.write(self.command)
         logger.info("SCPICommand: {}; Response: {}"
